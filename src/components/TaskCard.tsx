@@ -2,9 +2,13 @@ import type { Task } from "../types/task";
 
 type Props = {
   task: Task;
+  viewers: {
+    name: string;
+    color: string;
+  }[];
 };
 
-function TaskCard({ task }: Props) {
+function TaskCard({ task, viewers }: Props){
   const today = new Date();
   const due = new Date(task.dueDate);
   const isOverdue = due < today && task.status !== "Done";
@@ -44,6 +48,23 @@ function TaskCard({ task }: Props) {
           ? `🔴 ${diffDays} days overdue`
           : `📅 ${task.dueDate}`}
       </p>
+      {viewers.length > 0 && (
+      <div className="flex -space-x-1 mt-2">
+        {viewers.slice(0, 2).map((v, i) => (
+          <div
+            key={i}
+            className={`w-5 h-5 rounded-full ${v.color} text-white text-xs flex items-center justify-center border border-white`}
+          >
+            {v.name[0]}
+          </div>
+        ))}
+        {viewers.length > 2 && (
+          <div className="w-5 h-5 rounded-full bg-gray-400 text-white text-xs flex items-center justify-center border border-white">
+            +{viewers.length - 2}
+          </div>
+        )}
+  </div>
+)}
     </div>
   );
 }
