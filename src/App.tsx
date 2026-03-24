@@ -111,11 +111,13 @@ function App() {
                       }`}
                       > 
                       <TaskCard
-                        task={task}
-                        viewers={activeUsers
-                          .filter((u) => u.taskId === task.id)
-                          .map((u) => ({ name: u.name, color: u.color }))}
-                      />
+                          task={task}
+                          viewers={
+                            activeUsers
+                              .filter((u) => u.taskId === task.id)
+                              .map((u) => ({ name: u.name as string, color: u.color as string }))
+                          }
+                        />
                     </div>
                     ))
                   )}
