@@ -109,7 +109,7 @@ function App() {
                       className={`transition-opacity ${
                         draggedId === task.id ? "opacity-40" : "opacity-100"
                       }`}
-                      > 
+                    >
                       <TaskCard
                           task={task}
                           viewers={
