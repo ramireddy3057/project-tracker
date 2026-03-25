@@ -93,7 +93,7 @@ function App() {
                   </span>
                 </div>
                 
-                <div className="overflow-y-auto max-h-[500px] flex flex-col">
+                <div className="overflow-y-auto max-h-[500px] flex flex-col" onDragOver={(e) => e.preventDefault()}>
                   {colTasks.length === 0 ? (
                     <div className="text-center text-gray-400 text-sm mt-10">
                       <p className="text-2xl mb-2">📭</p>
@@ -101,15 +101,19 @@ function App() {
                     </div>
                   ) : (
                     colTasks.map((task) => (
-                      <div
-                      key={task.id}
-                      draggable
-                      onDragStart={() => onDragStart(task.id)}
-                      onDragEnd={onDragEnd}
-                      className={`transition-opacity ${
-                        draggedId === task.id ? "opacity-40" : "opacity-100"
-                      }`}
-                    >
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={(e) => {
+                      e.stopPropagation();
+                      onDragStart(task.id);
+                    }}
+                    onDragEnd={onDragEnd}
+                    style={{ cursor: "grab" }}
+                    className={`transition-opacity ${
+                      draggedId === task.id ? "opacity-40" : "opacity-100"
+                    }`}
+                  >
                       <TaskCard
                           task={task}
                           viewers={
