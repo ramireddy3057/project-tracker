@@ -9,7 +9,6 @@ interface TaskStore {
 
 export const useTaskStore = create<TaskStore>((set) => ({
   tasks: initialTasks,
-
   moveTask: (taskId, newStatus) =>
     set((state) => ({
       tasks: state.tasks.map((task) =>

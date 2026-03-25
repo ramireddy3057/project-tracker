@@ -14,15 +14,19 @@ const assignees = ["KR", "VK", "SR", "AR", "MJ", "PN"];
 const priorities: Priority[] = ["Critical", "High", "Medium", "Low"];
 const statuses: Status[] = ["To Do", "In Progress", "In Review", "Done"];
 
-function randomItem<T>(arr: T[]): T {
-  return arr[Math.floor(Math.random() * arr.length)];
+// Seeded random — always produces same sequence
+function seededRandom(seed: number) {
+  const x = Math.sin(seed + 1) * 10000;
+  return x - Math.floor(x);
 }
 
-function randomDate(start: Date, end: Date): string {
-  const d = new Date(
-    start.getTime() + Math.random() * (end.getTime() - start.getTime())
-  );
-  return d.toISOString().split("T")[0];
+function seededItem<T>(arr: T[], seed: number): T {
+  return arr[Math.floor(seededRandom(seed) * arr.length)];
+}
+
+function seededDate(start: Date, end: Date, seed: number): string {
+  const t = start.getTime() + seededRandom(seed) * (end.getTime() - start.getTime());
+  return new Date(t).toISOString().split("T")[0];
 }
 
 function generateTasks(count: number): Task[] {
@@ -33,25 +37,21 @@ function generateTasks(count: number): Task[] {
   future.setMonth(future.getMonth() + 2);
 
   return Array.from({ length: count }, (_, i) => {
-    const hasStartDate = Math.random() > 0.2;
-    const startDate = hasStartDate ? randomDate(past, today) : undefined;
-    const dueDate = randomDate(
-      startDate ? new Date(startDate) : today,
-      future
-    );
-
-    // Make some tasks overdue
-    const isOverdue = Math.random() > 0.7;
-    const finalDueDate = isOverdue ? randomDate(past, today) : dueDate;
+    const hasStartDate = seededRandom(i * 7) > 0.2;
+    const startDate = hasStartDate ? seededDate(past, today, i * 3) : undefined;
+    const isOverdue = seededRandom(i * 11) > 0.7;
+    const dueDate = isOverdue
+      ? seededDate(past, today, i * 5)
+      : seededDate(today, future, i * 5);
 
     return {
       id: String(i + 1),
-      title: `${randomItem(titles)} ${i + 1}`,
-      assignee: randomItem(assignees),
-      priority: randomItem(priorities),
-      status: randomItem(statuses),
+      title: `${seededItem(titles, i * 2)} ${i + 1}`,
+      assignee: seededItem(assignees, i * 4),
+      priority: seededItem(priorities, i * 6),
+      status: seededItem(statuses, i * 8),
       startDate,
-      dueDate: finalDueDate,
+      dueDate,
     };
   });
 }

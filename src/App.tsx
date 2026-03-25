@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useCollaboration } from "./hooks/useCollaboration";
 import { useTaskStore } from "./store/taskStore";
 import TaskCard from "./components/TaskCard";
-import { useDragAndDrop } from "./hooks/useDragAndDrop";
 import ListView from "./views/ListView";
 import TimelineView from "./views/TimelineView";
 import FilterBar from "./components/FilterBar";
+import type { Status } from "./types/task";
 
 const columns = [
   { title: "To Do", status: "To Do" as const, color: "bg-slate-100", dot: "bg-gray-400" },
@@ -17,11 +17,14 @@ const columns = [
 function App() {
   const tasks = useTaskStore((state) => state.tasks);
   const moveTask = useTaskStore((state) => state.moveTask);
-  const { draggedId, overColumn, onDragStart, onDragOver, onDrop, onDragEnd } = useDragAndDrop(moveTask);
   const [view, setView] = useState<"kanban" | "list" | "timeline">("kanban");
-  const [filteredTasks, setFilteredTasks] = useState(tasks);
+  const [activeFilters, setActiveFilters] = useState<((t: typeof tasks[0]) => boolean) | null>(null);
+  const filteredTasks = activeFilters ? tasks.filter(activeFilters) : tasks;
   const taskIds = tasks.map((t) => t.id);
   const activeUsers = useCollaboration(taskIds);
+  const [overColumn, setOverColumn] = useState<string | null>(null);
+  const draggedId = useRef<string | null>(null);
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
 
@@ -31,8 +34,6 @@ function App() {
           <h1 className="text-2xl font-bold text-gray-800">Project Tracker</h1>
           <p className="text-gray-500 text-sm mt-1">Manage your tasks across all stages</p>
         </div>
-
-        {/* View Switcher */}
         <div className="flex gap-2">
           {(["kanban", "list", "timeline"] as const).map((v) => (
             <button
@@ -49,6 +50,7 @@ function App() {
           ))}
         </div>
       </div>
+
       {/* Collaboration Bar */}
       <div className="bg-white rounded-xl shadow-sm px-4 py-3 mb-4 flex items-center gap-3">
         <div className="flex -space-x-2">
@@ -56,7 +58,6 @@ function App() {
             <div
               key={u.id}
               className={`w-8 h-8 rounded-full ${u.color} text-white text-xs font-bold flex items-center justify-center border-2 border-white`}
-              title={u.name}
             >
               {u.name}
             </div>
@@ -66,9 +67,16 @@ function App() {
           <span className="font-semibold text-gray-700">{activeUsers.length} people</span> are viewing this board
         </p>
       </div>
-      {/* Filter Bar */}
-      <FilterBar tasks={tasks} onFilter={setFilteredTasks} />
 
+      {/* Filter Bar */}
+      <FilterBar tasks={tasks} onFilter={(filtered) => {
+        if (filtered.length === tasks.length) {
+          setActiveFilters(null);
+        } else {
+          const ids = new Set(filtered.map(t => t.id));
+          setActiveFilters(() => (t: typeof tasks[0]) => ids.has(t.id));
+        }
+      }} />
       {/* Kanban View */}
       {view === "kanban" && (
         <div className="flex gap-4 overflow-x-auto pb-4">
@@ -82,9 +90,26 @@ function App() {
                 className={`${col.color} rounded-xl p-4 min-w-[270px] w-[270px] flex flex-col transition-all ${
                   isOver ? "ring-2 ring-blue-400 bg-blue-50" : ""
                 }`}
-                onDragOver={(e) => onDragOver(e, col.status)}
-                onDrop={() => onDrop(col.status)}
+                onDragEnter={() => setOverColumn(col.status)}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.dataTransfer.dropEffect = "move";
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  if (draggedId.current) {
+                    moveTask(draggedId.current, col.status as Status);
+                    draggedId.current = null;
+                  }
+                  setOverColumn(null);
+                }}
+                onDragLeave={(e) => {
+                  if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+                    setOverColumn(null);
+                  }
+                }}
               >
+                {/* Column Header */}
                 <div className="flex items-center gap-2 mb-4">
                   <div className={`w-3 h-3 rounded-full ${col.dot}`}></div>
                   <h2 className="font-semibold text-gray-700 text-sm">{col.title}</h2>
@@ -92,8 +117,9 @@ function App() {
                     {colTasks.length}
                   </span>
                 </div>
-                
-                <div className="overflow-y-auto max-h-[500px] flex flex-col" onDragOver={(e) => e.preventDefault()}>
+
+                {/* Tasks */}
+                <div className="overflow-y-auto max-h-[500px] flex flex-col gap-1">
                   {colTasks.length === 0 ? (
                     <div className="text-center text-gray-400 text-sm mt-10">
                       <p className="text-2xl mb-2">📭</p>
@@ -101,28 +127,27 @@ function App() {
                     </div>
                   ) : (
                     colTasks.map((task) => (
-                  <div
-                    key={task.id}
-                    draggable
-                    onDragStart={(e) => {
-                      e.stopPropagation();
-                      onDragStart(task.id);
-                    }}
-                    onDragEnd={onDragEnd}
-                    style={{ cursor: "grab" }}
-                    className={`transition-opacity ${
-                      draggedId === task.id ? "opacity-40" : "opacity-100"
-                    }`}
-                  >
-                      <TaskCard
+                      <div
+                        key={task.id}
+                        draggable
+                        onDragStart={(e) => {
+                          draggedId.current = task.id;
+                          e.dataTransfer.effectAllowed = "move";
+                          e.dataTransfer.setData("text/plain", task.id);
+                        }}
+                        onDragEnd={() => {
+                          draggedId.current = null;
+                          setOverColumn(null);
+                        }}
+                        style={{ cursor: "grab" }}
+                      >
+                        <TaskCard
                           task={task}
-                          viewers={
-                            activeUsers
-                              .filter((u) => u.taskId === task.id)
-                              .map((u) => ({ name: u.name as string, color: u.color as string }))
-                          }
+                          viewers={activeUsers
+                            .filter((u) => u.taskId === task.id)
+                            .map((u) => ({ name: u.name, color: u.color }))}
                         />
-                    </div>
+                      </div>
                     ))
                   )}
                 </div>
