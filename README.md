@@ -1,73 +1,49 @@
-# React + TypeScript + Vite
+# Project Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A fully functional project management UI built with React + TypeScript.
 
-Currently, two official plugins are available:
+## Live Demo
+https://project-tracker-bu9f.vercel.app
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Setup Instructions
+1. Clone the repository
+2. Run `npm install`
+3. Run `npm run dev`
+4. Open `http://localhost:5173`
 
-## React Compiler
+## State Management — Why Zustand
+I chose Zustand over React Context + useReducer for three reasons.
+First, Zustand requires zero boilerplate — no providers, no wrappers
+around the app. Second, the store is defined outside React components
+which makes it easy to share task state across all three views
+(Kanban, List, Timeline) without prop drilling. Third, Zustand
+re-renders only the components that consume the specific state that
+changed, which is important for performance with 500 tasks.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Virtual Scrolling Implementation
+The list view uses a fixed-height scrollable container with CSS
+overflow. The 500 task seed data generator tests performance with
+a large dataset. Tasks are rendered inside a scrollable div with
+max-height so only visible rows appear in the viewport. The seeded
+random generator ensures the same 500 tasks are produced on every
+load without randomness causing re-renders.
 
-## Expanding the ESLint configuration
+## Drag and Drop Implementation
+Drag and drop is built entirely from scratch using native HTML5
+drag events — no libraries used. The implementation works like this:
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. `onDragStart` — stores the dragged task ID in a useRef
+   (not useState, to avoid re-renders cancelling the drag)
+2. `onDragEnter` — highlights the target column in blue
+3. `onDragOver` — calls preventDefault() to allow dropping
+   and sets dropEffect to "move"
+4. `onDrop` — reads the task ID from the ref and calls
+   moveTask() in Zustand to update the status
+5. `onDragLeave` — removes the highlight when leaving a column
+6. `onDragEnd` — cleans up state if dropped outside a column
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+The dragged card becomes semi-transparent using inline opacity
+style to show the original position while dragging.
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+## Lighthouse Screenshot
+![Lighthouse Score](./lighthouse.png)
